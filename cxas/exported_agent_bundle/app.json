@@ -1,0 +1,36 @@
+{
+  "displayName": "Zendesk Support Assistant",
+  "description": "Customer Service AI Assistant integrated with Zendesk MCP tools and Live Human Chat Escalation.",
+  "rootAgent": "zendesk_support_agent",
+  "modelSettings": {
+    "model": "gemini-3-flash-preview"
+  },
+  "loggingSettings": {
+    "cloudLoggingSettings": {
+      "enableCloudLogging": true
+    }
+  },
+  "variableDeclarations": [
+    {
+      "name": "brand_name",
+      "description": "Active brand name displayed to the customer.",
+      "schema": {
+        "type": "STRING"
+      }
+    },
+    {
+      "name": "order_id",
+      "description": "Active customer order or reference ID.",
+      "schema": {
+        "type": "STRING"
+      }
+    },
+    {
+      "name": "zendesk_ticket_id",
+      "description": "Active Zendesk ticket ID generated during escalation or offline creation.",
+      "schema": {
+        "type": "STRING"
+      }
+    }
+  ]
+}

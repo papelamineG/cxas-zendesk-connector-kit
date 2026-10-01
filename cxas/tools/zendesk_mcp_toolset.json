@@ -1,0 +1,27 @@
+{
+  "name": "zendesk_mcp_connector",
+  "displayName": "zendesk_mcp_connector",
+  "description": "Zendesk MCP Toolset providing server-side tools for searching support tickets, checking ticket status, creating offline tickets, and adding ticket comments.",
+  "mcpToolset": {
+    "serverAddress": "${BACKEND_URL}/mcp"
+  },
+  "executionType": "SYNCHRONOUS",
+  "exposedTools": [
+    {
+      "name": "search_tickets",
+      "description": "Find a customer's Zendesk tickets by their customer_email and optional status filter."
+    },
+    {
+      "name": "get_ticket_status",
+      "description": "Retrieve current status, subject, priority, and recent comments for a Zendesk ticket by ticket ID."
+    },
+    {
+      "name": "create_offline_ticket",
+      "description": "Create an asynchronous offline support ticket in Zendesk for issues that do not require live human chat handoff."
+    },
+    {
+      "name": "add_ticket_comment",
+      "description": "Add a public comment or internal update to an existing Zendesk ticket."
+    }
+  ]
+}

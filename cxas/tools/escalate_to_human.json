@@ -1,0 +1,54 @@
+{
+  "name": "escalate_to_human",
+  "displayName": "escalate_to_human",
+  "clientFunction": {
+    "name": "escalate_to_human",
+    "description": "Hand the conversation to a human specialist. Call this ONLY when the customer explicitly asks to speak to a person, a human, or a real agent, or says they no longer want to talk to an assistant. Do NOT call it merely because the customer sounds frustrated. Never mention this tool, a ticket, or any internal action in your reply.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "summary": {
+          "type": "STRING",
+          "description": "One sentence describing the customer's issue, written in the customer's own language."
+        },
+        "language": {
+          "type": "STRING",
+          "description": "The conversation language code: 'en', 'es', 'fr', or 'de'."
+        },
+        "order_id": {
+          "type": "STRING",
+          "description": "The order reference ID or customer account ID if known from conversation. Omit if unknown."
+        }
+      },
+      "required": [
+        "summary",
+        "language"
+      ]
+    },
+    "response": {
+      "type": "OBJECT",
+      "properties": {
+        "status": {
+          "type": "STRING",
+          "description": "SUCCESS or ERROR."
+        },
+        "ticket_id": {
+          "type": "STRING",
+          "description": "The support ticket reference ID, present on SUCCESS."
+        },
+        "agent_action": {
+          "type": "STRING",
+          "description": "Instruction for what to communicate to the customer if status is ERROR."
+        },
+        "error_code": {
+          "type": "STRING",
+          "description": "Machine-readable error code if status is ERROR."
+        }
+      },
+      "required": [
+        "status"
+      ]
+    }
+  },
+  "executionType": "SYNCHRONOUS"
+}

@@ -1,0 +1,271 @@
+/* ==========================================================================
+   CXAS <-> Zendesk bridge styles
+   --------------------------------------------------------------------------
+   1. Escalation overlay composer (masks <chat-messenger>'s own input band)
+   2. Status pill
+   3. Built-in <cxas-preview-messenger> (chat-messenger-compatible preview)
+   Every colour / size is a CSS variable so integrators can theme it.
+   ========================================================================== */
+
+:root {
+  --cxas-zd-accent: #1f73b7;            /* Zendesk-ish blue */
+  --cxas-zd-accent-contrast: #ffffff;
+  --cxas-zd-specialist: #0f8a5f;        /* human specialist indicator */
+  --cxas-zd-danger: #c62828;
+  --cxas-zd-surface: #ffffff;
+  --cxas-zd-surface-muted: #f4f6f8;
+  --cxas-zd-text: #1d2733;
+  --cxas-zd-text-muted: #5b6875;
+  --cxas-zd-border: rgba(29, 39, 51, 0.14);
+  --cxas-zd-radius: 16px;
+  --cxas-zd-composer-height: 106px;     /* measured height of the widget's input band */
+  --cxas-zd-z: 100000;                  /* above typical floating chat panels */
+  --cxas-zd-font: inherit;
+}
+
+/* --------------------------------------------------------------------------
+   1. Overlay composer
+   The widget's composer lives in a CLOSED shadow root: it cannot be hidden,
+   disabled or restyled from page script, only covered. The overlay is opaque
+   and spans the whole bottom band, so clicks and keystrokes aimed at the
+   widget's own input land here instead -- the assistant is unreachable during
+   a human takeover by construction. Position is set inline by the bridge from
+   the messenger's bounding box.
+   -------------------------------------------------------------------------- */
+.cxas-zd-composer {
+  position: fixed;                      /* switched to absolute for in-flow widgets */
+  z-index: var(--cxas-zd-z);
+  box-sizing: border-box;
+  height: var(--cxas-zd-composer-height);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 12px 12px;
+  background: var(--cxas-zd-surface);
+  border-top: 1px solid var(--cxas-zd-border);
+  border-radius: 0 0 var(--cxas-zd-radius) var(--cxas-zd-radius);
+  box-shadow: 0 -4px 14px rgba(29, 39, 51, 0.07);
+  font-family: var(--cxas-zd-font);
+  color: var(--cxas-zd-text);
+  pointer-events: auto;
+  animation: cxas-zd-rise 160ms ease-out;
+}
+.cxas-zd-composer[hidden] { display: none !important; }
+
+@keyframes cxas-zd-rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.cxas-zd-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+.cxas-zd-input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--cxas-zd-border);
+  border-radius: 999px;
+  padding: 10px 16px;
+  font: inherit;
+  font-size: 0.92rem;
+  color: var(--cxas-zd-text);
+  background: var(--cxas-zd-surface);
+  outline: none;
+}
+.cxas-zd-input:focus-visible {
+  border-color: var(--cxas-zd-specialist);
+  box-shadow: 0 0 0 3px rgba(15, 138, 95, 0.18);
+}
+.cxas-zd-send {
+  flex: 0 0 auto;
+  border: none;
+  border-radius: 999px;
+  padding: 10px 18px;
+  background: var(--cxas-zd-specialist);
+  color: var(--cxas-zd-accent-contrast);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cxas-zd-send:focus-visible { outline: 3px solid rgba(15, 138, 95, 0.35); outline-offset: 2px; }
+.cxas-zd-send:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* --------------------------------------------------------------------------
+   2. Status pill
+   -------------------------------------------------------------------------- */
+.cxas-zd-pill {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--cxas-zd-accent);
+  background: rgba(31, 115, 183, 0.10);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cxas-zd-pill[data-state="joined"] { color: var(--cxas-zd-specialist); background: rgba(15, 138, 95, 0.12); }
+.cxas-zd-pill[data-state="error"]  { color: var(--cxas-zd-danger);     background: rgba(198, 40, 40, 0.10); }
+.cxas-zd-pulse {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: cxas-zd-pulse 1.3s ease-in-out infinite;
+}
+@keyframes cxas-zd-pulse {
+  0%, 100% { opacity: 0.35; transform: scale(0.85); }
+  50%      { opacity: 1;    transform: scale(1.15); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cxas-zd-pulse, .cxas-zd-composer { animation: none; }
+}
+
+/* --------------------------------------------------------------------------
+   3. <cxas-preview-messenger> -- offline, chat-messenger-compatible preview
+   -------------------------------------------------------------------------- */
+cxas-preview-messenger {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 420px;
+  height: 600px;
+  border: 1px solid var(--cxas-zd-border);
+  border-radius: var(--cxas-zd-radius);
+  background: var(--cxas-zd-surface);
+  overflow: hidden;
+  box-shadow: 0 12px 32px rgba(29, 39, 51, 0.12);
+  font-family: var(--cxas-zd-font);
+  color: var(--cxas-zd-text);
+}
+.cxas-preview-header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: var(--cxas-zd-accent);
+  color: var(--cxas-zd-accent-contrast);
+}
+.cxas-preview-avatar {
+  width: 30px; height: 30px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: rgba(255, 255, 255, 0.2);
+  font-weight: 700; font-size: 0.85rem;
+}
+.cxas-preview-title { font-weight: 600; font-size: 0.95rem; line-height: 1.2; }
+.cxas-preview-subtitle { font-size: 0.72rem; opacity: 0.85; }
+
+.cxas-preview-transcript {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--cxas-zd-surface-muted);
+  scroll-behavior: smooth;
+}
+cxas-preview-messenger.cxas-zd-escalated .cxas-preview-transcript {
+  /* keep the newest message above the taller overlay band */
+  padding-bottom: calc(var(--cxas-zd-composer-height) - 60px);
+}
+
+.cxas-preview-msg {
+  max-width: 82%;
+  padding: 9px 13px;
+  border-radius: 14px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+.cxas-preview-msg[data-role="assistant"] {
+  align-self: flex-start;
+  background: var(--cxas-zd-surface);
+  border: 1px solid var(--cxas-zd-border);
+  border-bottom-left-radius: 4px;
+}
+.cxas-preview-msg[data-role="user"] {
+  align-self: flex-end;
+  background: var(--cxas-zd-accent);
+  color: var(--cxas-zd-accent-contrast);
+  border-bottom-right-radius: 4px;
+}
+.cxas-preview-msg[data-role="specialist"] {
+  align-self: flex-start;
+  background: #e8f6ef;
+  border: 1px solid rgba(15, 138, 95, 0.35);
+  border-left: 4px solid var(--cxas-zd-specialist);
+  border-bottom-left-radius: 4px;
+}
+.cxas-preview-msg[data-role="system"] {
+  align-self: center;
+  max-width: 92%;
+  background: transparent;
+  color: var(--cxas-zd-text-muted);
+  font-size: 0.78rem;
+  text-align: center;
+}
+.cxas-preview-badge {
+  display: inline-block;
+  margin-bottom: 3px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--cxas-zd-accent-contrast);
+  background: var(--cxas-zd-specialist);
+}
+
+.cxas-preview-composer {
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  height: 96px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid var(--cxas-zd-border);
+  background: var(--cxas-zd-surface);
+}
+.cxas-preview-input {
+  flex: 1; min-width: 0;
+  border: 1px solid var(--cxas-zd-border);
+  border-radius: 999px;
+  padding: 10px 16px;
+  font: inherit; font-size: 0.92rem;
+  outline: none;
+}
+.cxas-preview-input:focus-visible { border-color: var(--cxas-zd-accent); box-shadow: 0 0 0 3px rgba(31, 115, 183, 0.18); }
+.cxas-preview-send {
+  border: none; border-radius: 999px;
+  padding: 10px 18px;
+  background: var(--cxas-zd-accent); color: var(--cxas-zd-accent-contrast);
+  font: inherit; font-size: 0.86rem; font-weight: 600;
+  cursor: pointer;
+}
+.cxas-preview-send:focus-visible { outline: 3px solid rgba(31, 115, 183, 0.35); outline-offset: 2px; }
+
+.cxas-zd-sr-only {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0);
+  white-space: nowrap; border: 0;
+}

@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CXAS × Zendesk Connector Kit — Sandbox Workbench</title>
+  <link rel="stylesheet" href="cxas-zendesk-bridge.css">
+  <style>
+    :root {
+      --wb-bg: #f3f5f8;
+      --wb-card: #ffffff;
+      --wb-text: #1d2733;
+      --wb-muted: #5b6875;
+      --wb-border: rgba(29, 39, 51, 0.12);
+      --wb-accent: #1f73b7;
+      --wb-green: #0f8a5f;
+      --wb-amber: #b26a00;
+      --wb-red: #c62828;
+      --wb-radius: 14px;
+      --cxas-zd-font: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--cxas-zd-font);
+      background: var(--wb-bg);
+      color: var(--wb-text);
+      line-height: 1.45;
+    }
+    header.wb-header {
+      display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+      padding: 18px 28px;
+      background: var(--wb-card);
+      border-bottom: 1px solid var(--wb-border);
+    }
+    .wb-brand h1 { margin: 0; font-size: 1.15rem; }
+    .wb-brand p { margin: 2px 0 0; color: var(--wb-muted); font-size: 0.85rem; }
+    .wb-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 12px; border-radius: 999px;
+      font-size: 0.8rem; font-weight: 700;
+      background: rgba(91, 104, 117, 0.12); color: var(--wb-muted);
+    }
+    .wb-badge::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+    .wb-badge[data-mode="mock_simulator"] { background: rgba(178, 106, 0, 0.12); color: var(--wb-amber); }
+    .wb-badge[data-mode="zendesk_live"] { background: rgba(15, 138, 95, 0.12); color: var(--wb-green); }
+    .wb-badge[data-mode="error"] { background: rgba(198, 40, 40, 0.12); color: var(--wb-red); }
+
+    main.wb-grid {
+      display: grid;
+      grid-template-columns: minmax(360px, 1fr) minmax(380px, 460px);
+      gap: 24px;
+      padding: 24px 28px 48px;
+      max-width: 1320px;
+      margin: 0 auto;
+    }
+    @media (max-width: 960px) { main.wb-grid { grid-template-columns: 1fr; } }
+    .wb-col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+    .wb-card {
+      background: var(--wb-card);
+      border: 1px solid var(--wb-border);
+      border-radius: var(--wb-radius);
+      padding: 18px 20px;
+    }
+    .wb-card h2 { margin: 0 0 4px; font-size: 1rem; }
+    .wb-card .wb-sub { margin: 0 0 14px; color: var(--wb-muted); font-size: 0.82rem; }
+    .wb-arch { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+    .wb-arch div { background: var(--wb-bg); border-radius: 10px; padding: 10px 12px; font-size: 0.8rem; }
+    .wb-arch strong { display: block; font-size: 0.78rem; color: var(--wb-muted); text-transform: uppercase; letter-spacing: .04em; }
+    label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--wb-muted); margin: 10px 0 4px; }
+    input[type="text"], input[type="email"], input[type="number"], select, textarea {
+      width: 100%;
+      padding: 9px 11px;
+      border: 1px solid var(--wb-border);
+      border-radius: 9px;
+      font: inherit; font-size: 0.88rem;
+      background: #fff; color: var(--wb-text);
+    }
+    textarea { min-height: 76px; resize: vertical; }
+    input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible {
+      outline: 3px solid rgba(31, 115, 183, 0.35); outline-offset: 1px;
+    }
+    .wb-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .wb-row > * { flex: 1 1 140px; }
+    .wb-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+    button.wb-btn {
+      border: 1px solid transparent; border-radius: 9px;
+      padding: 9px 14px; font: inherit; font-size: 0.85rem; font-weight: 600;
+      cursor: pointer; background: var(--wb-accent); color: #fff;
+    }
+    button.wb-btn.secondary { background: #fff; color: var(--wb-text); border-color: var(--wb-border); }
+    button.wb-btn.success { background: var(--wb-green); }
+    button.wb-btn.warn { background: var(--wb-amber); }
+    button.wb-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    pre.wb-output {
+      margin: 12px 0 0; padding: 12px; max-height: 260px; overflow: auto;
+      background: #0f1720; color: #d6e2ee; border-radius: 10px;
+      font-size: 0.76rem; white-space: pre-wrap; word-break: break-word;
+    }
+    ul.wb-escalations { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+    ul.wb-escalations li button {
+      width: 100%; text-align: left; cursor: pointer;
+      border: 1px solid var(--wb-border); border-radius: 10px; background: #fff;
+      padding: 10px 12px; font: inherit; font-size: 0.82rem; color: var(--wb-text);
+    }
+    ul.wb-escalations li button[aria-pressed="true"] { border-color: var(--wb-green); box-shadow: 0 0 0 2px rgba(15, 138, 95, 0.2); }
+    .wb-esc-meta { color: var(--wb-muted); font-size: 0.75rem; }
+    .wb-empty { color: var(--wb-muted); font-size: 0.82rem; font-style: italic; }
+    .wb-log { margin-top: 10px; font-size: 0.75rem; color: var(--wb-muted); min-height: 1.2em; }
+    .wb-config summary { cursor: pointer; font-weight: 600; font-size: 0.88rem; }
+    .wb-chat-stage { display: flex; justify-content: center; }
+    #live-messenger-host chat-messenger { display: block; width: 100%; height: 620px; }
+    .wb-state { font-size: 0.75rem; color: var(--wb-muted); margin-top: 8px; text-align: center; }
+    .wb-hint { font-size: 0.78rem; color: var(--wb-muted); margin: 8px 0 0; }
+    code { font-size: 0.8em; background: var(--wb-bg); padding: 1px 5px; border-radius: 5px; }
+  </style>
+</head>
+<body>
+  <header class="wb-header">
+    <div class="wb-brand">
+      <h1>CX Agent Studio × Zendesk — Connector Kit</h1>
+      <p>Live human hand-off + server-side Zendesk MCP tools · Sandbox workbench</p>
+    </div>
+    <div>
+      <span id="mode-badge" class="wb-badge" data-mode="unknown" role="status" aria-live="polite">Checking backend…</span>
+    </div>
+  </header>
+
+  <main class="wb-grid">
+    <!-- ================= LEFT: architecture, MCP tester, simulator ================= -->
+    <section class="wb-col" aria-label="Operator tools">
+      <div class="wb-card">
+        <h2>Architecture status</h2>
+        <p class="wb-sub" id="health-detail">Loading…</p>
+        <div class="wb-arch">
+          <div><strong>Live hand-off</strong>CXAS <code>escalate_to_human</code> client function → relay → Zendesk ticket</div>
+          <div><strong>Async support</strong>CXAS MCP toolset → <code>/mcp</code> → 4 Zendesk tools</div>
+          <div><strong>Zendesk backend</strong><span id="arch-backend">—</span></div>
+          <div><strong>Active escalations</strong><span id="arch-active">0</span></div>
+        </div>
+      </div>
+
+      <div class="wb-card">
+        <h2>Server-side MCP tool tester</h2>
+        <p class="wb-sub">Calls the same functions the CXAS agent reaches through the <code>zendesk_mcp_connector</code> toolset (via <code>POST /api/mcp-preview/{tool}</code>).</p>
+        <label for="mcp-tool">Tool</label>
+        <select id="mcp-tool">
+          <option value="search_tickets">search_tickets</option>
+          <option value="get_ticket_status">get_ticket_status</option>
+          <option value="create_offline_ticket">create_offline_ticket</option>
+          <option value="add_ticket_comment">add_ticket_comment</option>
+        </select>
+        <div id="mcp-fields"></div>
+        <div class="wb-actions">
+          <button type="button" class="wb-btn" id="mcp-run">Run tool</button>
+        </div>
+        <pre class="wb-output" id="mcp-output" aria-live="polite">// Results appear here</pre>
+      </div>
+
+      <div class="wb-card">
+        <h2>Zendesk specialist simulator</h2>
+        <p class="wb-sub">Play the human agent on the far side of Zendesk. In live mode, reply from your Zendesk agent workspace instead.</p>
+        <div class="wb-actions" style="margin-top:0">
+          <button type="button" class="wb-btn warn" id="sim-trigger">Trigger Demo Escalation</button>
+        </div>
+        <label>Active escalations</label>
+        <ul class="wb-escalations" id="sim-escalations" aria-label="Active escalations">
+          <li class="wb-empty">No active escalations yet.</li>
+        </ul>
+        <label for="sim-author">Reply as</label>
+        <input type="text" id="sim-author" value="Sarah — Zendesk Agent">
+        <label for="sim-reply">Specialist reply</label>
+        <textarea id="sim-reply" placeholder="Hi! I'm Sarah from the support team — I'm looking at your case now."></textarea>
+        <div class="wb-actions">
+          <button type="button" class="wb-btn success" id="sim-send" disabled>Send to Customer Chat</button>
+          <button type="button" class="wb-btn secondary" id="sim-solve" disabled>Mark Ticket Solved (Hand Back to AI)</button>
+        </div>
+        <div class="wb-log" id="sim-log" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- ================= RIGHT: customer chat preview ================= -->
+    <section class="wb-col" aria-label="Customer chat preview">
+      <div class="wb-card">
+        <details class="wb-config" id="config">
+          <summary>Customer &amp; CXAS configuration</summary>
+          <div class="wb-row">
+            <div><label for="cfg-name">Customer name</label><input type="text" id="cfg-name" value="Jordan Rivera"></div>
+            <div><label for="cfg-email">Customer email</label><input type="email" id="cfg-email" value="jordan.rivera@example.com"></div>
+          </div>
+          <div class="wb-row">
+            <div>
+              <label for="cfg-lang">Language</label>
+              <select id="cfg-lang">
+                <option value="en">English</option>
+                <option value="es">Español</option>
+                <option value="fr">Français</option>
+                <option value="de">Deutsch</option>
+              </select>
+            </div>
+          </div>
+          <p class="wb-hint">Connect a real CX Agent Studio deployment (optional). Also accepted as query params:
+            <code>?project-id=&amp;location=&amp;app-id=&amp;deployment-id=</code></p>
+          <div class="wb-row">
+            <div><label for="cfg-project">Project ID</label><input type="text" id="cfg-project" placeholder="my-gcp-project"></div>
+            <div><label for="cfg-location">Location</label><input type="text" id="cfg-location" placeholder="us"></div>
+          </div>
+          <div class="wb-row">
+            <div><label for="cfg-app">App (agent) ID</label><input type="text" id="cfg-app" placeholder="app UUID"></div>
+            <div><label for="cfg-deployment">Deployment ID</label><input type="text" id="cfg-deployment" placeholder="deployment UUID"></div>
+          </div>
+          <div class="wb-actions">
+            <button type="button" class="wb-btn" id="cfg-connect">Connect live CXAS agent</button>
+            <button type="button" class="wb-btn secondary" id="cfg-preview">Use offline preview widget</button>
+          </div>
+        </details>
+      </div>
+
+      <div class="wb-chat-stage" id="chat-stage">
+        <cxas-preview-messenger id="preview-messenger" chat-title="Acme Assistant (preview)"></cxas-preview-messenger>
+      </div>
+      <div class="wb-state" id="bridge-state" role="status" aria-live="polite">Bridge idle</div>
+    </section>
+  </main>
+
+  <script src="cxas-zendesk-bridge.js"></script>
+  <script>
+  (function () {
+    'use strict';
+    var $ = function (id) { return document.getElementById(id); };
+    var params = new URLSearchParams(location.search);
+    var selectedEscalation = null;
+
+    // ---------------- customer identity + bridge ----------------
+    function customer() { return { name: $('cfg-name').value.trim(), email: $('cfg-email').value.trim() }; }
+
+    var initialLang = (params.get('lang') || 'en').slice(0, 2);
+    $('cfg-lang').value = ['en', 'es', 'fr', 'de'].indexOf(initialLang) >= 0 ? initialLang : 'en';
+
+    CxasZendeskBridge.init({
+      apiBase: params.get('api') || '',
+      language: $('cfg-lang').value,
+      getCustomer: customer,
+      pollIntervalMs: Number(params.get('poll')) || 2000
+    });
+
+    $('cfg-lang').addEventListener('change', function () {
+      CxasZendeskBridge.setLanguage(this.value);
+      var preview = $('preview-messenger');
+      if (preview) preview.setAttribute('language', this.value);
+    });
+    $('preview-messenger') && $('preview-messenger').setAttribute('language', $('cfg-lang').value);
+
+    window.addEventListener('cxas-zendesk:state', function (event) {
+      var s = event.detail;
+      $('bridge-state').textContent = s.active
+        ? 'Human takeover active · ticket #' + s.escalationId + (s.specialistName ? ' · ' + s.specialistName : ' · waiting for a specialist')
+        : (s.endedReason ? 'Assistant resumed (' + s.endedReason + ')' : 'Bridge idle — the AI assistant has the conversation');
+      refreshEscalations();
+    });
+
+    // ---------------- real <chat-messenger> (optional) ----------------
+    ['project-id', 'location', 'app-id', 'deployment-id'].forEach(function (key) {
+      var value = params.get(key) || (key === 'app-id' ? params.get('agent-id') : null);
+      if (value) $('cfg-' + key.split('-')[0]).value = value;
+    });
+    var live = {
+      project: params.get('project-id'), location: params.get('location') || 'us',
+      app: params.get('app-id') || params.get('agent-id'), deployment: params.get('deployment-id')
+    };
+
+    function mountLiveMessenger() {
+      var deploymentName = 'projects/' + live.project + '/locations/' + live.location +
+        '/apps/' + live.app + '/deployments/' + live.deployment;
+      var sdk = 'https://www.gstatic.com/chat-messenger/sdk/prod/v1.16/';
+      ['themes/chat-messenger-default.css'].forEach(function (href) {
+        var link = document.createElement('link'); link.rel = 'stylesheet'; link.href = sdk + href;
+        document.head.appendChild(link);
+      });
+      window.addEventListener('chat-messenger-loaded', function () {
+        if (window.chatSdk && chatSdk.registerContext && chatSdk.prebuilts && chatSdk.prebuilts.ces) {
+          chatSdk.registerContext(chatSdk.prebuilts.ces.createContext({
+            deploymentName: deploymentName,
+            tokenBroker: { enableTokenBroker: true, enableRecaptcha: false }
+          }));
+        }
+      });
+      var stage = $('chat-stage');
+      stage.innerHTML = '';
+      var host = document.createElement('div');
+      host.id = 'live-messenger-host';
+      host.style.width = '100%';
+      var messenger = document.createElement('chat-messenger');
+      messenger.setAttribute('url-allowlist', '*');
+      messenger.setAttribute('deployment-id', live.deployment);
+      var container = document.createElement('chat-messenger-container');
+      container.setAttribute('chat-title', 'Customer support');
+      messenger.appendChild(container);
+      host.appendChild(messenger);
+      stage.appendChild(host);
+      var script = document.createElement('script');
+      script.src = sdk + 'chat-messenger.js';
+      script.defer = true;
+      document.head.appendChild(script);
+      $('bridge-state').textContent = 'Connected to CXAS deployment ' + deploymentName;
+    }
+    if (live.project && live.app && live.deployment) mountLiveMessenger();
+
+    $('cfg-connect').addEventListener('click', function () {
+      var q = new URLSearchParams();
+      q.set('project-id', $('cfg-project').value.trim());
+      q.set('location', $('cfg-location').value.trim() || 'us');
+      q.set('app-id', $('cfg-app').value.trim());
+      q.set('deployment-id', $('cfg-deployment').value.trim());
+      q.set('lang', $('cfg-lang').value);
+      if (!q.get('project-id') || !q.get('app-id') || !q.get('deployment-id')) {
+        alert('Project ID, App ID and Deployment ID are required to connect a live agent.');
+        return;
+      }
+      location.search = q.toString();
+    });
+    $('cfg-preview').addEventListener('click', function () { location.search = 'lang=' + $('cfg-lang').value; });
+
+    // ---------------- health / mode badge ----------------
+    async function refreshHealth() {
+      try {
+        var h = await (await fetch('/api/health')).json();
+        var badge = $('mode-badge');
+        badge.dataset.mode = h.configured ? h.mode : 'error';
+        badge.textContent = !h.configured ? 'Live Zendesk · misconfigured'
+          : h.mode === 'zendesk_live' ? 'Live Zendesk · ' + (h.zendesk_subdomain || '') + '.zendesk.com'
+          : 'Mock Simulator (sandbox)';
+        $('arch-backend').textContent = h.mode === 'zendesk_live'
+          ? 'Zendesk v2 REST · ' + (h.zendesk_subdomain || '?') : 'In-memory Zendesk v2 emulator';
+        $('arch-active').textContent = String(h.active_escalations);
+        $('health-detail').textContent = h.configured
+          ? 'Backend healthy · brand "' + h.brand + '" · MCP endpoint ' + location.origin + h.mcp_endpoint
+          : h.config_error;
+      } catch (err) {
+        $('mode-badge').dataset.mode = 'error';
+        $('mode-badge').textContent = 'Backend unreachable';
+      }
+    }
+
+    // ---------------- MCP tool tester ----------------
+    var TOOL_FIELDS = {
+      search_tickets: [['customer_email', 'Customer email', 'email', function () { return customer().email; }],
+                       ['status', 'Status filter (optional)', 'text', '']],
+      get_ticket_status: [['ticket_id', 'Ticket ID', 'number', '']],
+      create_offline_ticket: [['subject', 'Subject', 'text', 'Question about my order'],
+                              ['description', 'Description', 'textarea', 'My order arrived without the assembly kit. Can you send one?'],
+                              ['customer_email', 'Customer email', 'email', function () { return customer().email; }],
+                              ['customer_name', 'Customer name', 'text', function () { return customer().name; }],
+                              ['priority', 'Priority (low|normal|high|urgent)', 'text', 'normal'],
+                              ['reference_id', 'Reference ID (optional)', 'text', 'ORD-1001']],
+      add_ticket_comment: [['ticket_id', 'Ticket ID', 'number', ''],
+                           ['comment_body', 'Comment', 'textarea', 'Adding a photo of the damaged corner.'],
+                           ['customer_email', 'Customer email (optional ownership check)', 'email', '']]
+    };
+
+    function renderToolFields() {
+      var tool = $('mcp-tool').value;
+      var host = $('mcp-fields');
+      host.innerHTML = '';
+      TOOL_FIELDS[tool].forEach(function (f) {
+        var id = 'mcp-field-' + f[0];
+        var label = document.createElement('label');
+        label.htmlFor = id; label.textContent = f[1];
+        var input = f[2] === 'textarea' ? document.createElement('textarea') : document.createElement('input');
+        if (f[2] !== 'textarea') input.type = f[2];
+        input.id = id; input.dataset.arg = f[0]; input.dataset.kind = f[2];
+        var initial = typeof f[3] === 'function' ? f[3]() : f[3];
+        if (f[0] === 'ticket_id' && selectedEscalation) initial = selectedEscalation;
+        input.value = initial;
+        host.appendChild(label); host.appendChild(input);
+      });
+    }
+    $('mcp-tool').addEventListener('change', renderToolFields);
+
+    $('mcp-run').addEventListener('click', async function () {
+      var tool = $('mcp-tool').value;
+      var args = {};
+      document.querySelectorAll('#mcp-fields [data-arg]').forEach(function (el) {
+        var value = el.value.trim();
+        if (value === '' && el.dataset.kind !== 'number') { if (el.dataset.arg !== 'status') args[el.dataset.arg] = value; return; }
+        args[el.dataset.arg] = el.dataset.kind === 'number' ? Number(value) : value;
+      });
+      Object.keys(args).forEach(function (k) { if (args[k] === '') delete args[k]; });
+      $('mcp-output').textContent = '// Calling ' + tool + '…';
+      try {
+        var response = await fetch('/api/mcp-preview/' + tool, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(args)
+        });
+        $('mcp-output').textContent = JSON.stringify(await response.json(), null, 2);
+      } catch (err) {
+        $('mcp-output').textContent = '// Request failed: ' + err;
+      }
+      refreshEscalations();
+    });
+
+    // ---------------- specialist simulator ----------------
+    function simLog(text) { $('sim-log').textContent = text; }
+
+    async function refreshEscalations() {
+      var data;
+      try { data = await (await fetch('/api/escalation')).json(); } catch (e) { return; }
+      var list = $('sim-escalations');
+      var items = (data && data.escalations) || [];
+      $('arch-active').textContent = String(items.length);
+      if (selectedEscalation && !items.some(function (e) { return e.escalation_id === selectedEscalation; })) selectedEscalation = null;
+      if (!selectedEscalation && items.length) selectedEscalation = items[0].escalation_id;
+      list.innerHTML = '';
+      if (!items.length) {
+        var empty = document.createElement('li');
+        empty.className = 'wb-empty'; empty.textContent = 'No active escalations yet.';
+        list.appendChild(empty);
+      }
+      items.forEach(function (e) {
+        var li = document.createElement('li');
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.dataset.escalationId = e.escalation_id;
+        btn.setAttribute('aria-pressed', String(e.escalation_id === selectedEscalation));
+        var title = document.createElement('div');
+        title.textContent = '#' + e.escalation_id + ' · ' + (e.customer_name || 'Customer') + ' · ' + (e.ticket_status || '');
+        var meta = document.createElement('div');
+        meta.className = 'wb-esc-meta';
+        meta.textContent = (e.summary || '').slice(0, 120);
+        btn.appendChild(title); btn.appendChild(meta);
+        btn.addEventListener('click', function () { selectedEscalation = e.escalation_id; refreshEscalations(); });
+        li.appendChild(btn); list.appendChild(li);
+      });
+      $('sim-send').disabled = !selectedEscalation;
+      $('sim-solve').disabled = !selectedEscalation;
+    }
+
+    $('sim-send').addEventListener('click', async function () {
+      var body = $('sim-reply').value.trim();
+      if (!selectedEscalation || !body) { simLog('Select an escalation and type a reply first.'); return; }
+      var r = await (await fetch('/api/simulator/escalation/' + encodeURIComponent(selectedEscalation) + '/specialist-reply', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: body, author_name: $('sim-author').value.trim() || 'Zendesk Specialist' })
+      })).json();
+      if (r.status === 'SUCCESS') { $('sim-reply').value = ''; simLog('Reply posted to ticket #' + selectedEscalation + ' — it reaches the chat on the next poll.'); }
+      else simLog('Error: ' + (r.error_code || '') + ' ' + (r.message || ''));
+    });
+
+    $('sim-solve').addEventListener('click', async function () {
+      if (!selectedEscalation) return;
+      var id = selectedEscalation;
+      var r = await (await fetch('/api/simulator/escalation/' + encodeURIComponent(id) + '/status', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'solved' })
+      })).json();
+      simLog(r.status === 'SUCCESS' ? 'Ticket #' + id + ' marked solved — the chat hands back to the AI assistant.'
+                                    : 'Error: ' + (r.error_code || '') + ' ' + (r.message || ''));
+      refreshEscalations();
+    });
+
+    $('sim-trigger').addEventListener('click', async function () {
+      simLog('Opening a demo escalation…');
+      var r = await CxasZendeskBridge.triggerEscalation({
+        summary: 'Demo escalation from the workbench: the customer wants to talk to a person about a damaged delivery.',
+        language: $('cfg-lang').value
+      });
+      simLog(r.status === 'SUCCESS' ? 'Escalation #' + r.ticket_id + ' opened — reply as the specialist below.'
+                                    : 'Escalation failed: ' + (r.error_code || '') + ' — ' + (r.agent_action || ''));
+      refreshEscalations();
+    });
+
+    renderToolFields();
+    refreshHealth();
+    refreshEscalations();
+    setInterval(refreshEscalations, 2000);
+    setInterval(refreshHealth, 10000);
+  })();
+  </script>
+</body>
+</html>
